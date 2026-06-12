@@ -10,7 +10,7 @@ export interface Usuario {
 
 export interface CampoFormulario {
   nombre: string;
-  tipo: 'text' | 'textarea' | 'boolean' | 'select' | 'file' | 'number';
+  tipo: 'text' | 'textarea' | 'boolean' | 'select' | 'file' | 'number' | 'chip' | 'list' | 'table';
   etiqueta: string;
   requerido: boolean;
   opciones?: string[];
@@ -131,4 +131,4 @@ export interface AuthResponse {
   departamento: string;
 }
 
-export {}
+export { }

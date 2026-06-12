@@ -147,12 +147,98 @@ import { ThemeService } from '../../services/theme/theme.service';
                             ❌ No / Rechazado
                           </label>
                         </div>
+                      } @else if (campo.tipo === 'select') {
+                        <select class="form-input" [(ngModel)]="formularioDatos[campo.nombre]"
+                          [disabled]="tarea.estado === 'COMPLETADO'">
+                          <option value="">-- Seleccionar --</option>
+                          @for (opt of campo.opciones; track opt) {
+                            <option [value]="opt">{{ opt }}</option>
+                          }
+                        </select>
+                      } @else if (campo.tipo === 'chip') {
+                        <div class="chips-container">
+                          @for (opt of campo.opciones; track opt) {
+                            <span class="chip-pill"
+                              [class.selected]="isChipSelected(campo.nombre, opt)"
+                              (click)="toggleChip(campo.nombre, opt)">
+                              {{ opt }}
+                            </span>
+                          }
+                        </div>
+                      } @else if (campo.tipo === 'list') {
+                        <div class="list-container">
+                          <ul class="dynamic-list">
+                            @for (item of getListItems(campo.nombre); track $index; let i = $index) {
+                              <li class="list-item">
+                                <span>• {{ item }}</span>
+                                @if (tarea.estado !== 'COMPLETADO') {
+                                  <button type="button" class="btn-list-del" (click)="removeListItem(campo.nombre, i)">✕</button>
+                                }
+                              </li>
+                            }
+                            @if (getListItems(campo.nombre).length === 0) {
+                              <li style="color:var(--text-faint); font-size:12px; font-style:italic">Lista vacía.</li>
+                            }
+                          </ul>
+                          @if (tarea.estado !== 'COMPLETADO') {
+                            <div class="list-add-row" style="display:flex;gap:6px;margin-top:8px">
+                              <input #listItemInput class="form-input" style="flex:1;padding:6px 10px" placeholder="Nuevo elemento..." (keyup.enter)="addListItem(campo.nombre, listItemInput)" />
+                              <button type="button" class="btn-outline" style="padding:6px 12px;font-size:12px" (click)="addListItem(campo.nombre, listItemInput)">+ Agregar</button>
+                            </div>
+                          }
+                        </div>
+                      } @else if (campo.tipo === 'table') {
+                        <div class="grid-field">
+                          <div class="grid-table-wrap">
+                            <table class="grid-table">
+                              <thead>
+                                <tr>
+                                  <th>#</th>
+                                  @for (col of (campo.opciones || []); track col) {
+                                    <th>{{ col }}</th>
+                                  }
+                                  @if (tarea.estado !== 'COMPLETADO') { <th></th> }
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @for (row of getTableRows(campo.nombre); track $index; let i = $index) {
+                                  <tr>
+                                    <td class="grid-idx">{{ i + 1 }}</td>
+                                    @for (col of (campo.opciones || []); track col) {
+                                      <td>
+                                        <input class="form-input grid-input"
+                                          [(ngModel)]="row[col]"
+                                          [placeholder]="col"
+                                          [disabled]="tarea.estado === 'COMPLETADO'" />
+                                      </td>
+                                    }
+                                    @if (tarea.estado !== 'COMPLETADO') {
+                                      <td>
+                                        <button type="button" class="btn-grid-del" (click)="removeTableRow(campo.nombre, i)">✕</button>
+                                      </td>
+                                    }
+                                  </tr>
+                                }
+                                @if (getTableRows(campo.nombre).length === 0) {
+                                  <tr>
+                                    <td [attr.colspan]="(campo.opciones || []).length + 2" style="text-align:center; color:var(--text-faint); padding:10px">
+                                      Tabla vacía. Haz clic en "Agregar fila".
+                                    </td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          </div>
+                          @if (tarea.estado !== 'COMPLETADO') {
+                            <button type="button" class="btn-grid-add" (click)="addTableRow(campo.nombre, campo.opciones || [])">+ Agregar fila</button>
+                          }
+                        </div>
                       } @else if (campo.tipo === 'number') {
                         <input type="number" class="form-input" [(ngModel)]="formularioDatos[campo.nombre]"
                           [placeholder]="'Ingresa ' + (campo.etiqueta || campo.nombre)"
                           [disabled]="tarea.estado === 'COMPLETADO'" />
                       } @else if (campo.tipo === 'grid') {
-                        <!-- Grid/Tabla dinámica -->
+                        <!-- Grid/Tabla dinámica (Legacy) -->
                         <div class="grid-field">
                           <div class="grid-table-wrap">
                             <table class="grid-table">
@@ -171,7 +257,7 @@ import { ThemeService } from '../../services/theme/theme.service';
                                     <td><input class="form-input grid-input" [(ngModel)]="row.descripcion" placeholder="Descripción" [disabled]="tarea.estado === 'COMPLETADO'" /></td>
                                     <td><input class="form-input grid-input" [(ngModel)]="row.valor" placeholder="Valor" [disabled]="tarea.estado === 'COMPLETADO'" /></td>
                                     @if (tarea.estado !== 'COMPLETADO') {
-                                      <td><button class="btn-grid-del" (click)="removeGridRow(campo.nombre, i)">✕</button></td>
+                                      <td><button type="button" class="btn-grid-del" (click)="removeGridRow(campo.nombre, i)">✕</button></td>
                                     }
                                   </tr>
                                 }
@@ -179,7 +265,7 @@ import { ThemeService } from '../../services/theme/theme.service';
                             </table>
                           </div>
                           @if (tarea.estado !== 'COMPLETADO') {
-                            <button class="btn-grid-add" (click)="addGridRow(campo.nombre)">+ Agregar fila</button>
+                            <button type="button" class="btn-grid-add" (click)="addGridRow(campo.nombre)">+ Agregar fila</button>
                           }
                         </div>
                       } @else {
@@ -396,6 +482,36 @@ import { ThemeService } from '../../services/theme/theme.service';
     .hist-nodo { font-size: 12px; font-weight: 600; margin: 0 0 2px; }
     .hist-meta { font-size: 10px; color: var(--text-muted); margin: 0; }
 
+    /* Chips and dynamic list styles */
+    .chips-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .chip-pill {
+      background: var(--card); border: 1px solid var(--border-2);
+      border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer;
+      color: var(--text-muted); transition: all 0.2s; user-select: none;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .chip-pill:hover { border-color: var(--primary); color: var(--text); }
+    .chip-pill.selected {
+      background: hsl(216,85%,50%,0.12); border-color: var(--primary); color: var(--primary);
+      font-weight: 600; box-shadow: 0 0 8px hsl(216,85%,50%,0.2);
+    }
+    .list-container {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px; margin-top: 6px;
+    }
+    .dynamic-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+    .list-item {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--card); border: 1px solid var(--border-2);
+      border-radius: 8px; padding: 6px 12px; font-size: 13px; color: var(--text);
+    }
+    .btn-list-del {
+      background: none; border: none; color: var(--danger); cursor: pointer;
+      font-size: 12px; padding: 2px 6px; border-radius: 4px; display: inline-flex;
+      align-items: center; justify-content: center;
+    }
+    .btn-list-del:hover { background: hsl(355,80%,55%,0.1); }
+
     @media (max-width: 900px) {
       .tarea-layout { grid-template-columns: 1fr; }
       .info-grid-2 { grid-template-columns: 1fr; }
@@ -472,12 +588,76 @@ export class TareaDetalleComponent implements OnInit {
 
   addGridRow(campo: string): void {
     if (!this.formularioDatos[campo]) this.formularioDatos[campo] = [];
-    (this.formularioDatos[campo] as any[]).push({ descripcion: '', valor: '' });
+    this.formularioDatos[campo] = [...this.formularioDatos[campo], { descripcion: '', valor: '' }];
   }
 
   removeGridRow(campo: string, idx: number): void {
     if (!this.formularioDatos[campo]) return;
-    (this.formularioDatos[campo] as any[]).splice(idx, 1);
+    this.formularioDatos[campo] = (this.formularioDatos[campo] as any[]).filter((_, i) => i !== idx);
+  }
+
+  // ── Chip field helpers ────────────────────────────────────────────────────
+  toggleChip(campoNombre: string, value: string): void {
+    if (this.tarea?.estado === 'COMPLETADO') return;
+    if (!Array.isArray(this.formularioDatos[campoNombre])) {
+      this.formularioDatos[campoNombre] = [];
+    }
+    const idx = this.formularioDatos[campoNombre].indexOf(value);
+    if (idx > -1) {
+      this.formularioDatos[campoNombre] = (this.formularioDatos[campoNombre] as string[]).filter((_, i) => i !== idx);
+    } else {
+      this.formularioDatos[campoNombre] = [...this.formularioDatos[campoNombre], value];
+    }
+  }
+
+  isChipSelected(campoNombre: string, value: string): boolean {
+    const arr = this.formularioDatos[campoNombre];
+    return Array.isArray(arr) && arr.includes(value);
+  }
+
+  // ── List field helpers ────────────────────────────────────────────────────
+  getListItems(campo: string): string[] {
+    if (!this.formularioDatos[campo]) {
+      this.formularioDatos[campo] = [];
+    }
+    return this.formularioDatos[campo] as string[];
+  }
+
+  addListItem(campo: string, inputEl: HTMLInputElement): void {
+    if (this.tarea?.estado === 'COMPLETADO') return;
+    const val = inputEl.value.trim();
+    if (!val) return;
+    if (!this.formularioDatos[campo]) this.formularioDatos[campo] = [];
+    this.formularioDatos[campo] = [...this.formularioDatos[campo], val];
+    inputEl.value = '';
+  }
+
+  removeListItem(campo: string, idx: number): void {
+    if (this.tarea?.estado === 'COMPLETADO') return;
+    if (!this.formularioDatos[campo]) return;
+    this.formularioDatos[campo] = (this.formularioDatos[campo] as string[]).filter((_, i) => i !== idx);
+  }
+
+  // ── Table field helpers ───────────────────────────────────────────────────
+  getTableRows(campo: string): any[] {
+    if (!this.formularioDatos[campo]) {
+      this.formularioDatos[campo] = [];
+    }
+    return this.formularioDatos[campo] as any[];
+  }
+
+  addTableRow(campo: string, columnas: string[]): void {
+    if (this.tarea?.estado === 'COMPLETADO') return;
+    if (!this.formularioDatos[campo]) this.formularioDatos[campo] = [];
+    const newRow: any = {};
+    columnas.forEach(col => newRow[col] = '');
+    this.formularioDatos[campo] = [...this.formularioDatos[campo], newRow];
+  }
+
+  removeTableRow(campo: string, idx: number): void {
+    if (this.tarea?.estado === 'COMPLETADO') return;
+    if (!this.formularioDatos[campo]) return;
+    this.formularioDatos[campo] = (this.formularioDatos[campo] as any[]).filter((_, i) => i !== idx);
   }
 
   extraerDatosIA(): void {
@@ -524,9 +704,16 @@ export class TareaDetalleComponent implements OnInit {
     if (!this.tarea) return;
     // Validate required fields
     for (const campo of this.camposFormulario) {
-      if (campo.requerido && !this.formularioDatos[campo.nombre]) {
-        this.formError = `El campo "${campo.etiqueta || campo.nombre}" es requerido`;
-        return;
+      if (campo.requerido) {
+        const val = this.formularioDatos[campo.nombre];
+        const isEmpty = val === null || val === undefined ||
+          (typeof val === 'string' && val.trim() === '') ||
+          (Array.isArray(val) && val.length === 0) ||
+          (typeof val === 'object' && Object.keys(val).length === 0);
+        if (isEmpty) {
+          this.formError = `El campo "${campo.etiqueta || campo.nombre}" es requerido`;
+          return;
+        }
       }
     }
     this.guardando = true;

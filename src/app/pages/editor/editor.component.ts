@@ -204,17 +204,34 @@ class PoolLayout extends go.GridLayout {
                 <button class="btn-xs" (click)="addCampo()">+ Campo</button>
               </div>
               @for (campo of selectedNode.camposFormulario || []; track $index; let i = $index) {
-                <div class="campo-row">
-                  <input [(ngModel)]="campo.etiqueta" placeholder="Etiqueta" class="cinput" (ngModelChange)="applyNodeProps()" />
-                  <select [(ngModel)]="campo.tipo" class="csel" (ngModelChange)="applyNodeProps()">
-                    <option value="text">Texto</option>
-                    <option value="number">Número</option>
-                    <option value="boolean">Sí/No</option>
-                    <option value="select">Lista</option>
-                    <option value="file">Archivo</option>
-                  </select>
-                  <label class="req-chk" title="Requerido"><input type="checkbox" [(ngModel)]="campo.requerido" (ngModelChange)="applyNodeProps()" /><span>*</span></label>
-                  <button class="btn-xs danger" (click)="removeCampo(i)">x</button>
+                <div class="campo-wrapper">
+                  <div class="campo-row">
+                    <input [(ngModel)]="campo.etiqueta" placeholder="Etiqueta" class="cinput" (ngModelChange)="applyNodeProps()" />
+                    <select [(ngModel)]="campo.tipo" class="csel" (ngModelChange)="applyNodeProps()">
+                      <option value="text">Texto</option>
+                      <option value="textarea">Texto largo</option>
+                      <option value="number">Número</option>
+                      <option value="boolean">Sí/No</option>
+                      <option value="select">Desplegable</option>
+                      <option value="chip">Chips</option>
+                      <option value="list">Lista dinámica</option>
+                      <option value="table">Tabla</option>
+                      <option value="file">Archivo</option>
+                    </select>
+                    <label class="req-chk" title="Requerido"><input type="checkbox" [(ngModel)]="campo.requerido" (ngModelChange)="applyNodeProps()" /><span>*</span></label>
+                    <button class="btn-xs danger" (click)="removeCampo(i)">x</button>
+                  </div>
+                  @if (campo.tipo === 'select' || campo.tipo === 'chip' || campo.tipo === 'table') {
+                    <div style="margin-top:6px">
+                      <label class="plabel" style="margin-top:2px; font-size:9px">
+                        {{ campo.tipo === 'table' ? 'Columnas (separadas por coma)' : 'Opciones (separadas por coma)' }}
+                      </label>
+                      <input class="pinput" style="padding:4px 8px; font-size:11px"
+                        [ngModel]="getOpcionesText(campo)"
+                        (ngModelChange)="setOpcionesText(campo, $event)"
+                        [placeholder]="campo.tipo === 'table' ? 'Ej: Item, Cantidad, Precio' : 'Ej: Opción A, Opción B'" />
+                    </div>
+                  }
                 </div>
               }
             }
@@ -297,7 +314,8 @@ class PoolLayout extends go.GridLayout {
     .pinput { border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; outline: none; width: 100%; box-sizing: border-box; background: var(--bg-2); color: var(--text); font-family: inherit; transition: border-color 0.2s; }
     .pinput:focus { border-color: var(--primary); }
     .campos-hdr { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
-    .campo-row { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
+    .campo-wrapper { margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-2); }
+    .campo-row { display: flex; gap: 4px; align-items: center; }
     .cinput { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-size: 11px; outline: none; background: var(--bg-2); color: var(--text); }
     .csel { width: 72px; border: 1px solid var(--border); border-radius: 6px; padding: 5px 4px; font-size: 11px; outline: none; background: var(--bg-2); color: var(--text); }
     .req-chk { display: flex; align-items: center; gap: 2px; cursor: pointer; font-size: 11px; color: var(--danger); font-weight: 700; }
@@ -942,6 +960,15 @@ export class EditorComponent implements OnInit, AfterViewInit, OnDestroy {
   removeCampo(i: number): void {
     if (!this.selectedNode?.camposFormulario) return;
     this.selectedNode.camposFormulario.splice(i, 1);
+    this.applyNodeProps();
+  }
+
+  getOpcionesText(campo: CampoFormulario): string {
+    return campo.opciones ? campo.opciones.join(', ') : '';
+  }
+
+  setOpcionesText(campo: CampoFormulario, val: string): void {
+    campo.opciones = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
     this.applyNodeProps();
   }
 
